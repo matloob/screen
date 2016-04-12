@@ -1,6 +1,7 @@
 package psd
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -65,11 +66,54 @@ func skipImageResources(r io.Reader) {
 func skipLayers(r io.Reader) {
 	var length int32
 	read(r, &length)
+	fmt.Println("layers length", length)
 	buf := make([]byte, length)
 	n, err := r.Read(buf)
 	if err != nil || n < int(length) {
 		panic("error in skipLayers")
-	}	
+	}
+	fmt.Println("layersbuf", buf)
+
+	bb := bytes.NewBuffer(buf)
+	skipLayerInfo(bb)
+	skipGlobalLayerMaskInfo(bb)	
+	fmt.Println("remaining", bb.Bytes())	
+}
+
+func skipLayerInfo(r io.Reader) {
+	var length int32 
+	read(r, &length)
+	fmt.Println("layer info length: ", length)
+	if length == 0 {
+		fmt.Println("X")
+		return
+	}
+	var count int16
+	read(r, &count)
+	fmt.Println("layer count: ", count)
+	buf := make([]byte, length)
+	_, err := r.Read(buf)
+	if err != nil {
+		panic ("error in skipLayerInfo")
+	}
+}
+
+func skipGlobalLayerMaskInfo(r io.Reader) {
+	var length int32
+	var overlayColorSpace int16
+	var colorComponents [4]int16
+	var opacity int16
+	var kind byte
+	var pad byte
+
+	read(r, &length)
+	fmt.Println("global layer mask info length:", length)
+	read(r, &overlayColorSpace)
+	read(r, &colorComponents)
+	read(r, &opacity)
+	read(r, &kind)
+	read(r, &pad)
+	fmt.Println(overlayColorSpace, colorComponents, opacity, kind)
 }
 
 func decodeImageData(r io.Reader) {
